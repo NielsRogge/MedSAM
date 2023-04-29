@@ -92,6 +92,7 @@ for npz_folder in npz_folders:
     print("Npz folder: ", npz_folder)
     npz_data_path = join(args.data_path, npz_folder)
     save_path = join(args.seg_path_root, npz_folder)
+    print("Save path:", save_path)
     if not os.path.exists(save_path):
         os.makedirs(save_path, exist_ok=True)
         npz_files = sorted(os.listdir(npz_data_path))
