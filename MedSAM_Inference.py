@@ -101,6 +101,9 @@ for npz_folder in npz_folders:
             ori_imgs = npz['imgs']
             ori_gts = npz['gts']
 
+            print("Shape of ori_imgs: ", ori_imgs.shape)
+            print("Shape of ori_gts: ", ori_gts.shape)
+
             sam_segs = []
             sam_bboxes = []
             sam_dice_scores = []
