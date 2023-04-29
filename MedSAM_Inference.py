@@ -93,62 +93,61 @@ for npz_folder in npz_folders:
     npz_data_path = join(args.data_path, npz_folder)
     save_path = join(args.seg_path_root, npz_folder)
     print("Save path:", save_path)
-    if not os.path.exists(save_path):
-        os.makedirs(save_path, exist_ok=True)
-        npz_files = sorted(os.listdir(npz_data_path))
-        for npz_file in tqdm(npz_files):
-            try:
-                npz = np.load(join(npz_data_path, npz_file))
-                ori_imgs = npz['imgs']
-                ori_gts = npz['gts']
+    os.makedirs(save_path, exist_ok=True)
+    npz_files = sorted(os.listdir(npz_data_path))
+    for npz_file in tqdm(npz_files):
+        try:
+            npz = np.load(join(npz_data_path, npz_file))
+            ori_imgs = npz['imgs']
+            ori_gts = npz['gts']
 
-                sam_segs = []
-                sam_bboxes = []
-                sam_dice_scores = []
-                for img_id, ori_img in enumerate(ori_imgs):
-                    # get bounding box from mask
-                    gt2D = ori_gts[img_id]
-                    y_indices, x_indices = np.where(gt2D > 0)
-                    x_min, x_max = np.min(x_indices), np.max(x_indices)
-                    y_min, y_max = np.min(y_indices), np.max(y_indices)
-                    # add perturbation to bounding box coordinates
-                    H, W = gt2D.shape
-                    x_min = max(0, x_min - np.random.randint(0, 20))
-                    x_max = min(W, x_max + np.random.randint(0, 20))
-                    y_min = max(0, y_min - np.random.randint(0, 20))
-                    y_max = min(H, y_max + np.random.randint(0, 20))
-                    bbox = np.array([x_min, y_min, x_max, y_max])
-                    seg_mask = finetune_model_predict(ori_img, bbox, sam_trans, sam_model_tune, device=device)
-                    print("Shape of segmentation mask: ", seg_mask.shape)
-                    sam_segs.append(seg_mask)
-                    sam_bboxes.append(bbox)
-                    # these 2D dice scores are for debugging purpose. 
-                    # 3D dice scores should be computed for 3D images
-                    sam_dice_scores.append(compute_dice(seg_mask>0, gt2D>0))
-                
-                # save npz, including sam_segs, sam_bboxes, sam_dice_scores
-                print("Saving segmentation results to {}".format(join(save_path, npz_file)))
-                np.savez_compressed(join(save_path, npz_file), medsam_segs=sam_segs, gts=ori_gts, sam_bboxes=sam_bboxes)
+            sam_segs = []
+            sam_bboxes = []
+            sam_dice_scores = []
+            for img_id, ori_img in enumerate(ori_imgs):
+                # get bounding box from mask
+                gt2D = ori_gts[img_id]
+                y_indices, x_indices = np.where(gt2D > 0)
+                x_min, x_max = np.min(x_indices), np.max(x_indices)
+                y_min, y_max = np.min(y_indices), np.max(y_indices)
+                # add perturbation to bounding box coordinates
+                H, W = gt2D.shape
+                x_min = max(0, x_min - np.random.randint(0, 20))
+                x_max = min(W, x_max + np.random.randint(0, 20))
+                y_min = max(0, y_min - np.random.randint(0, 20))
+                y_max = min(H, y_max + np.random.randint(0, 20))
+                bbox = np.array([x_min, y_min, x_max, y_max])
+                seg_mask = finetune_model_predict(ori_img, bbox, sam_trans, sam_model_tune, device=device)
+                print("Shape of segmentation mask: ", seg_mask.shape)
+                sam_segs.append(seg_mask)
+                sam_bboxes.append(bbox)
+                # these 2D dice scores are for debugging purpose. 
+                # 3D dice scores should be computed for 3D images
+                sam_dice_scores.append(compute_dice(seg_mask>0, gt2D>0))
+            
+            # save npz, including sam_segs, sam_bboxes, sam_dice_scores
+            print("Saving segmentation results to {}".format(join(save_path, npz_file)))
+            np.savez_compressed(join(save_path, npz_file), medsam_segs=sam_segs, gts=ori_gts, sam_bboxes=sam_bboxes)
 
-                # visualize segmentation results
-                img_id = np.random.randint(0, len(ori_imgs))
-                # show ground truth and segmentation results in two subplots
-                fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-                axes[0].imshow(ori_imgs[img_id])
-                show_box(sam_bboxes[img_id], axes[0])
-                show_mask(ori_gts[img_id], axes[0])
-                axes[0].set_title('Ground Truth')
-                axes[0].axis('off')
+            # visualize segmentation results
+            img_id = np.random.randint(0, len(ori_imgs))
+            # show ground truth and segmentation results in two subplots
+            fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+            axes[0].imshow(ori_imgs[img_id])
+            show_box(sam_bboxes[img_id], axes[0])
+            show_mask(ori_gts[img_id], axes[0])
+            axes[0].set_title('Ground Truth')
+            axes[0].axis('off')
 
-                axes[1].imshow(ori_imgs[img_id])
-                show_box(sam_bboxes[img_id], axes[1])
-                show_mask(sam_segs[img_id], axes[1])
-                axes[1].set_title('MadSAM: DSC={:.3f}'.format(sam_dice_scores[img_id]))
-                axes[1].axis('off')
-                # save figure
-                fig.savefig(join(args.seg_png_path, npz_file.split('.npz')[0]+'.png'))
-                # close figure
-                plt.close(fig)
-            except Exception:
-                traceback.print_exc()
-                print('error in {}'.format(npz_file))
+            axes[1].imshow(ori_imgs[img_id])
+            show_box(sam_bboxes[img_id], axes[1])
+            show_mask(sam_segs[img_id], axes[1])
+            axes[1].set_title('MadSAM: DSC={:.3f}'.format(sam_dice_scores[img_id]))
+            axes[1].axis('off')
+            # save figure
+            fig.savefig(join(args.seg_png_path, npz_file.split('.npz')[0]+'.png'))
+            # close figure
+            plt.close(fig)
+        except Exception:
+            traceback.print_exc()
+            print('error in {}'.format(npz_file))
