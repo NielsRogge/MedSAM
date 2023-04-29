@@ -89,6 +89,7 @@ sam_trans = ResizeLongestSide(sam_model_tune.image_encoder.img_size)
 npz_folders = sorted(os.listdir(args.data_path))
 os.makedirs(args.seg_png_path, exist_ok=True)
 for npz_folder in npz_folders:
+    print("Npz folder: ", npz_folder)
     npz_data_path = join(args.data_path, npz_folder)
     save_path = join(args.seg_path_root, npz_folder)
     if not os.path.exists(save_path):
@@ -117,6 +118,7 @@ for npz_folder in npz_folders:
                     y_max = min(H, y_max + np.random.randint(0, 20))
                     bbox = np.array([x_min, y_min, x_max, y_max])
                     seg_mask = finetune_model_predict(ori_img, bbox, sam_trans, sam_model_tune, device=device)
+                    print("Shape of segmentation mask: ", seg_mask.shape)
                     sam_segs.append(seg_mask)
                     sam_bboxes.append(bbox)
                     # these 2D dice scores are for debugging purpose. 
@@ -124,6 +126,7 @@ for npz_folder in npz_folders:
                     sam_dice_scores.append(compute_dice(seg_mask>0, gt2D>0))
                 
                 # save npz, including sam_segs, sam_bboxes, sam_dice_scores
+                print("Saving segmentation results to {}".format(join(save_path, npz_file)))
                 np.savez_compressed(join(save_path, npz_file), medsam_segs=sam_segs, gts=ori_gts, sam_bboxes=sam_bboxes)
 
                 # visualize segmentation results
