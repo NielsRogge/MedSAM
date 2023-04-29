@@ -127,6 +127,9 @@ for npz_folder in npz_folders:
                 # these 2D dice scores are for debugging purpose. 
                 # 3D dice scores should be computed for 3D images
                 sam_dice_scores.append(compute_dice(seg_mask>0, gt2D>0))
+
+                if img_id > 0:
+                    break
             
             # save npz, including sam_segs, sam_bboxes, sam_dice_scores
             print("Saving segmentation results to {}".format(join(save_path, npz_file)))
